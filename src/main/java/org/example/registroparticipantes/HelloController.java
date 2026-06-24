@@ -79,8 +79,27 @@ public class HelloController {
         cmbEstadoCivil.setItems(FXCollections.observableArrayList("Soltero", "Casado", "Divorciado", "Viudo"));
         cmbCategoria.setItems(FXCollections.observableArrayList("Infantil", "Juvenil", "Adultos", "Master"));
 
-        // 3. Cargar los datos automáticamente al abrir la ventana
+        tblParticipantes.getSelectionModel().selectedItemProperty().addListener((obs, anteriorSeleccion, nuevaSeleccion) -> {
+                    if (nuevaSeleccion != null) {
+
+
+                        txtId.setText(String.valueOf(nuevaSeleccion.getId()));
+                        txtCedula.setText(nuevaSeleccion.getCedula());
+                        txtNombre.setText(nuevaSeleccion.getNombre());
+                        txtApellido.setText(nuevaSeleccion.getApellido());
+                        txtEdad.setText(String.valueOf(nuevaSeleccion.getEdad()));
+                        txtCorreo.setText(nuevaSeleccion.getCorreo());
+                        cmbEstadoCivil.setValue(nuevaSeleccion.getEstadoCivil());
+                        cmbCategoria.setValue(nuevaSeleccion.getCategoria());
+                        txtObservaciones.setText(nuevaSeleccion.getObservaciones());
+
+                        String jornada = nuevaSeleccion.getJornada();
+                        if ("Matutina".equals(jornada)) rbMatutina.setSelected(true);
+                        else if ("Vespertina".equals(jornada)) rbVespertina.setSelected(true);
+                        else if ("Nocturna".equals(jornada)) rbNocturna.setSelected(true);
+                    }
         Leer();
+    });
     }
 
     @FXML
@@ -288,10 +307,106 @@ public class HelloController {
     }
 
 
+    @FXML
+    private void Actualizar() {
+        try {
+            String idRaw = txtId.getText();
+            if (idRaw == null || idRaw.isEmpty()) {
+                throw new IllegalArgumentException("Debe seleccionar primero un participante de la tabla para poder modificarlo.");
+            }
+            int id = Integer.parseInt(idRaw);
+
+            String cedula = txtCedula.getText().trim();
+            String nombre = txtNombre.getText().trim();
+            String apellido = txtApellido.getText().trim();
+            String edadRaw = txtEdad.getText().trim();
+            String correo = txtCorreo.getText().trim();
+            String estadoCivil = cmbEstadoCivil.getValue();
+            String categoria = cmbCategoria.getValue();
+            String observaciones = txtObservaciones.getText().trim();
+
+            String jornada = "";
+            if (tgJornada.getSelectedToggle() != null) {
+                RadioButton rbSeleccionado = (RadioButton) tgJornada.getSelectedToggle();
+                jornada = rbSeleccionado.getText();
+            }
+
+            if (cedula.isEmpty() || nombre.isEmpty() || apellido.isEmpty() || edadRaw.isEmpty() ||
+                    correo.isEmpty() || estadoCivil == null || jornada.isEmpty() || categoria == null) {
+                throw new IllegalArgumentException("Todos los campos obligatorios deben estar llenos.");
+            }
+
+            if (!cedula.matches("\\d+") || cedula.length() != 10) {
+                throw new IllegalArgumentException("La cédula debe contener exactamente 10 números.");
+            }
+
+            int edad = Integer.parseInt(edadRaw);
+            if (edad <= 5) {
+                throw new IllegalArgumentException("El participante debe ser mayor de 5 años.");
+            }
+
+            if (!correo.contains("@")) {
+                throw new IllegalArgumentException("El correo electrónico debe ser válido (incluir '@').");
+            }
+
+            if (existeCorreoEnBDOtros(correo, id)) {
+                throw new IllegalArgumentException("Este correo ya está registrado por otro participante.");
+            }
+
+            Connection conn = Conexion.getInstancia();
+            String sql = "UPDATE participantes SET cedula = ?, nombre = ?, apellido = ?, edad = ?, "
+                    + "correo = ?, estado_civil = ?, jornada = ?, categoria = ?, observaciones = ? WHERE id = ?";
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, cedula);
+                pstmt.setString(2, nombre);
+                pstmt.setString(3, apellido);
+                pstmt.setInt(4, edad);
+                pstmt.setString(5, correo);
+                pstmt.setString(6, estadoCivil);
+                pstmt.setString(7, jornada);
+                pstmt.setString(8, categoria);
+                pstmt.setString(9, observaciones.isEmpty() ? null : observaciones);
+                pstmt.setInt(10, id); // Condición WHERE para actualizar solo este registro
+
+                int filasAfectadas = pstmt.executeUpdate();
+
+                if (filasAfectadas > 0) {
+                    mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Registro Modificado", "Los datos del participante han sido actualizados de forma exitosa.");
+                    Limpiar();
+                    Leer();
+                }
+            }
+
+        } catch (IllegalArgumentException e) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Advertencia de Validación", "Datos Incorrectos", e.getMessage());
+        } catch (SQLException e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo actualizar el registro", e.getMessage());
+        } catch (Exception e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error Crítico", "Ocurrió un error inesperado", e.getMessage());
+        }
+    }
 
 
 
-    // Método rápido para disparar las alertas visuales requeridas [cite: 39]
+    // Método auxiliar indispensable para verificar que el correo no lo tenga OTRA persona diferente a la que editamos
+    private boolean existeCorreoEnBDOtros(String correo, int idActual) throws SQLException {
+        Connection conn = Conexion.getInstancia();
+        String sql = "SELECT COUNT(*) FROM participantes WHERE correo = ? AND id <> ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, correo);
+            pstmt.setInt(2, idActual);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getInt(1) > 0;
+            }
+        }
+        return false;
+    }
+
+
+
+
+    //metodo que dispara las alertas
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String encabezado, String contenido) {
         Alert alerta = new Alert(tipo);
         alerta.setTitle(titulo);
