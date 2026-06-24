@@ -1,5 +1,9 @@
 package org.example.registroparticipantes;
 
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -20,22 +24,18 @@ import java.sql.SQLException;
 
 import javafx.scene.control.RadioButton;
 
+import java.util.Optional;
+import javafx.scene.control.ButtonType;
+
 public class HelloController {
 
-    @FXML
-    private TextField txtUsuario;
+    // Controles deLogin
+    @FXML private TextField txtUsuario;
+    @FXML private PasswordField txtContrasena;
+    @FXML private Button btnIngresar;
+    @FXML private Button btnSalir;
 
-    @FXML
-    private PasswordField txtContrasena;
-
-    @FXML
-    private Button btnIngresar;
-
-    @FXML
-    private Button btnSalir;
-
-
-    // Controles del Formulario
+    // Controles del CRUD
     @FXML private TextField txtId;
     @FXML private TextField txtCedula;
     @FXML private TextField txtNombre;
@@ -48,58 +48,53 @@ public class HelloController {
     @FXML private ComboBox<String> cmbCategoria;
     @FXML private TextArea txtObservaciones;
 
-    // Tabla e Historial
-    @FXML private TableView<Participante> tblParticipantes; // Cambiaremos Object por el Modelo más adelante
-    @FXML private TableColumn<Object, Integer> colId;
-    @FXML private TableColumn<Object, String> colCedula, colNombre, colApellido, colCorreo, colEstadoCivil, colJornada, colCategoria;
-    @FXML private TableColumn<Object, Integer> colEdad;
-
+    // Componentes del TableView
+    @FXML private TableView<Participante> tblParticipantes;
+    @FXML private TableColumn<Participante, Integer> colId;
+    @FXML private TableColumn<Participante, String> colCedula, colNombre, colApellido, colCorreo, colEstadoCivil, colJornada, colCategoria;
+    @FXML private TableColumn<Participante, Integer> colEdad;
 
     private ObservableList<Participante> listaParticipantes = FXCollections.observableArrayList();
 
-
     @FXML
     public void initialize() {
-        cmbEstadoCivil.setItems(FXCollections.observableArrayList("Soltero", "Casado", "Divorciado", "Viudo"));
+        if (cmbEstadoCivil != null) {
+            cmbEstadoCivil.setItems(FXCollections.observableArrayList("Soltero", "Casado", "Divorciado", "Viudo"));
+            cmbCategoria.setItems(FXCollections.observableArrayList("Infantil (5-12 años)", "Juvenil (13-18 años)", "Adultos (19-49 años)", "Master (50+ años)"));
 
-        cmbCategoria.setItems(FXCollections.observableArrayList("Infantil (5-12 años)", "Juvenil (13-18 años)", "Adultos (19-49 años)", "Master (50+ años)"));
+            colId.setCellValueFactory(new PropertyValueFactory<>("id"));
+            colCedula.setCellValueFactory(new PropertyValueFactory<>("cedula"));
+            colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
+            colApellido.setCellValueFactory(new PropertyValueFactory<>("apellido"));
+            colEdad.setCellValueFactory(new PropertyValueFactory<>("edad"));
+            colCorreo.setCellValueFactory(new PropertyValueFactory<>("correo"));
+            colEstadoCivil.setCellValueFactory(new PropertyValueFactory<>("estadoCivil"));
+            colJornada.setCellValueFactory(new PropertyValueFactory<>("jornada"));
+            colCategoria.setCellValueFactory(new PropertyValueFactory<>("categoria"));
 
-        // 1. Enlazar las columnas de la tabla con los atributos de la clase Participante
-        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colCedula.setCellValueFactory(new PropertyValueFactory<>("cedula"));
-        colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
-        colApellido.setCellValueFactory(new PropertyValueFactory<>("apellido"));
-        colEdad.setCellValueFactory(new PropertyValueFactory<>("edad"));
-        colCorreo.setCellValueFactory(new PropertyValueFactory<>("correo"));
-        colEstadoCivil.setCellValueFactory(new PropertyValueFactory<>("estadoCivil"));
-        colJornada.setCellValueFactory(new PropertyValueFactory<>("jornada"));
-        colCategoria.setCellValueFactory(new PropertyValueFactory<>("categoria"));
+            tblParticipantes.getSelectionModel().selectedItemProperty().addListener((obs, anteriorSeleccion, nuevaSeleccion) -> {
+                if (nuevaSeleccion != null) {
+                    txtId.setText(String.valueOf(nuevaSeleccion.getId()));
+                    txtCedula.setText(nuevaSeleccion.getCedula());
+                    txtNombre.setText(nuevaSeleccion.getNombre());
+                    txtApellido.setText(nuevaSeleccion.getApellido());
+                    txtEdad.setText(String.valueOf(nuevaSeleccion.getEdad()));
+                    txtCorreo.setText(nuevaSeleccion.getCorreo());
+                    cmbEstadoCivil.setValue(nuevaSeleccion.getEstadoCivil());
+                    cmbCategoria.setValue(nuevaSeleccion.getCategoria());
+                    txtObservaciones.setText(nuevaSeleccion.getObservaciones());
 
-        // 2. Llenar los ComboBox con las opciones obligatorias de la guía
-        cmbEstadoCivil.setItems(FXCollections.observableArrayList("Soltero", "Casado", "Divorciado", "Viudo"));
-        cmbCategoria.setItems(FXCollections.observableArrayList("Infantil", "Juvenil", "Adultos", "Master"));
+                    String jornada = nuevaSeleccion.getJornada();
+                    if ("Matutina".equals(jornada)) rbMatutina.setSelected(true);
+                    else if ("Vespertina".equals(jornada)) rbVespertina.setSelected(true);
+                    else if ("Nocturna".equals(jornada)) rbNocturna.setSelected(true);
+                }
+            });
 
-        tblParticipantes.getSelectionModel().selectedItemProperty().addListener((obs, anteriorSeleccion, nuevaSeleccion) -> {
-                    if (nuevaSeleccion != null) {
-
-
-                        txtId.setText(String.valueOf(nuevaSeleccion.getId()));
-                        txtCedula.setText(nuevaSeleccion.getCedula());
-                        txtNombre.setText(nuevaSeleccion.getNombre());
-                        txtApellido.setText(nuevaSeleccion.getApellido());
-                        txtEdad.setText(String.valueOf(nuevaSeleccion.getEdad()));
-                        txtCorreo.setText(nuevaSeleccion.getCorreo());
-                        cmbEstadoCivil.setValue(nuevaSeleccion.getEstadoCivil());
-                        cmbCategoria.setValue(nuevaSeleccion.getCategoria());
-                        txtObservaciones.setText(nuevaSeleccion.getObservaciones());
-
-                        String jornada = nuevaSeleccion.getJornada();
-                        if ("Matutina".equals(jornada)) rbMatutina.setSelected(true);
-                        else if ("Vespertina".equals(jornada)) rbVespertina.setSelected(true);
-                        else if ("Nocturna".equals(jornada)) rbNocturna.setSelected(true);
-                    }
-        Leer();
-    });
+            Leer();
+        } else {
+            System.out.println("Cargando componentes de la interfaz de Login...");
+        }
     }
 
     @FXML
@@ -113,9 +108,20 @@ public class HelloController {
             }
 
             if (usuario.equals("admin") && contrasena.equals("1234")) {
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Inicio de Sesión Correcto", "Bienvenido");
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Inicio de Sesión Correcto", "¡Bienvenido al Sistema de Natación!");
 
-                System.out.println("Cargando Ventana CRUD...");
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("CRUD.fxml"));
+                Parent root = loader.load();
+
+                Scene escenaCrud = new Scene(root);
+                Stage nuevoStage = new Stage();
+                nuevoStage.setTitle("Sistema de Registro de Participantes");
+                nuevoStage.setScene(escenaCrud);
+
+                Stage stageLogin = (Stage) btnIngresar.getScene().getWindow();
+                stageLogin.close();
+
+                nuevoStage.show();
 
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Error de Autenticación", "Credenciales Incorrectas", "El usuario o la contraseña no son válidos.");
@@ -124,7 +130,8 @@ public class HelloController {
         } catch (IllegalArgumentException e) {
             mostrarAlerta(Alert.AlertType.WARNING, "Campos Vacíos", "Advertencia de Validación", e.getMessage());
         } catch (Exception e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error Inesperado", "Ocurrió un error en el sistema", e.getMessage());
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana del CRUD", e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -133,7 +140,6 @@ public class HelloController {
         Stage stage = (Stage) btnSalir.getScene().getWindow();
         stage.close();
     }
-
 
     @FXML
     private void Limpiar() {
@@ -151,7 +157,6 @@ public class HelloController {
         txtObservaciones.clear();
     }
 
-    //metodos del CRUD
 
     @FXML
     public void Crear(){
@@ -179,7 +184,7 @@ public class HelloController {
             if (!cedula.matches("\\d+")) {
                 throw new IllegalArgumentException("La cédula debe contener únicamente números.");
             }
-            if (cedula.length() != 10) { // Validación extra típica en Ecuador
+            if (cedula.length() != 10) {
                 throw new IllegalArgumentException("La cédula debe tener exactamente 10 dígitos.");
             }
 
@@ -222,20 +227,17 @@ public class HelloController {
 
                 pstmt.executeUpdate();
 
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Registro Guardado", "Paciente registrado");
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Registro Guardado", "Participante registrado exitosamente.");
 
                 Limpiar();
                 Leer();
             }
 
         } catch (IllegalArgumentException e) {
-            // Captura y muestra advertencias de las validaciones en un Alert [cite: 39, 68]
             mostrarAlerta(Alert.AlertType.WARNING, "Advertencia de Validación", "Datos Incorrectos", e.getMessage());
         } catch (SQLException e) {
-            // Captura errores específicos de la base de datos [cite: 66, 76]
             mostrarAlerta(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar el registro", e.getMessage());
         } catch (Exception e) {
-            // Captura cualquier otro imprevisto [cite: 76]
             mostrarAlerta(Alert.AlertType.ERROR, "Error Crítico", "Ocurrió un error inesperado", e.getMessage());
         }
     }
@@ -263,6 +265,7 @@ public class HelloController {
         }
         return false;
     }
+
 
     @FXML
     private void Leer() {
@@ -296,11 +299,9 @@ public class HelloController {
             tblParticipantes.setItems(listaParticipantes);
 
         } catch (SQLException e) {
-            // Capturar errores específicos de base de datos e informar mediante un Alert gráfico
             mostrarAlerta(Alert.AlertType.ERROR, "Error de Lectura",
                     "No se pudieron cargar los datos de los participantes", e.getMessage());
         } catch (Exception e) {
-            // Capturar cualquier otro comportamiento anómalo inesperado
             mostrarAlerta(Alert.AlertType.ERROR, "Error Crítico",
                     "Ocurrió un error inesperado al procesar la lista", e.getMessage());
         }
@@ -367,7 +368,7 @@ public class HelloController {
                 pstmt.setString(7, jornada);
                 pstmt.setString(8, categoria);
                 pstmt.setString(9, observaciones.isEmpty() ? null : observaciones);
-                pstmt.setInt(10, id); // Condición WHERE para actualizar solo este registro
+                pstmt.setInt(10, id);
 
                 int filasAfectadas = pstmt.executeUpdate();
 
@@ -387,9 +388,6 @@ public class HelloController {
         }
     }
 
-
-
-    // Método auxiliar indispensable para verificar que el correo no lo tenga OTRA persona diferente a la que editamos
     private boolean existeCorreoEnBDOtros(String correo, int idActual) throws SQLException {
         Connection conn = Conexion.getInstancia();
         String sql = "SELECT COUNT(*) FROM participantes WHERE correo = ? AND id <> ?";
@@ -404,9 +402,50 @@ public class HelloController {
     }
 
 
+    @FXML
+    private void Eliminar() {
+        try {
+            String idRaw = txtId.getText();
+            if (idRaw == null || idRaw.isEmpty()) {
+                throw new IllegalArgumentException("Debe seleccionar primero un participante de la tabla para poder eliminarlo.");
+            }
+            int id = Integer.parseInt(idRaw);
+            String nombreCompleto = txtNombre.getText() + " " + txtApellido.getText();
 
+            Alert alertaConfirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+            alertaConfirmacion.setTitle("Confirmar Eliminación");
+            alertaConfirmacion.setHeaderText("¿Está seguro de eliminar a este participante?");
+            alertaConfirmacion.setContentText("Esta acción borrará permanentemente a: " + nombreCompleto + " (ID: " + id + ") del sistema.");
 
-    //metodo que dispara las alertas
+            Optional<ButtonType> resultado = alertaConfirmacion.showAndWait();
+
+            if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+                Connection conn = Conexion.getInstancia();
+                String sql = "DELETE FROM participantes WHERE id = ?";
+
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setInt(1, id);
+                    int filasAfectadas = pstmt.executeUpdate();
+
+                    if (filasAfectadas > 0) {
+                        mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Registro Eliminado", "El participante ha sido removido del sistema de forma correcta.");
+                        Limpiar();
+                        Leer();
+                    }
+                }
+            } else {
+                System.out.println("Eliminación cancelada por el usuario.");
+            }
+
+        } catch (IllegalArgumentException e) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Advertencia", "Selección Requerida", e.getMessage());
+        } catch (SQLException e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo eliminar el registro", e.getMessage());
+        } catch (Exception e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error Crítico", "Ocurrió un error inesperado", e.getMessage());
+        }
+    }
+
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String encabezado, String contenido) {
         Alert alerta = new Alert(tipo);
         alerta.setTitle(titulo);
@@ -414,5 +453,4 @@ public class HelloController {
         alerta.setContentText(contenido);
         alerta.showAndWait();
     }
-
 }

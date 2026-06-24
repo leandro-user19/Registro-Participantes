@@ -8,7 +8,7 @@ public class Conexion {
 
     private static Connection instancia;
 
-    private static final String URL = "jdbc:postgresql://localhost:5123/participantes";
+    private static final String URL = "jdbc:postgresql://localhost:5432/Participantes";
     private static final String USER = "postgres";
     private static final String PASSWORD = "123456";
 
